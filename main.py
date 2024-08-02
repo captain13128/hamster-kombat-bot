@@ -15,7 +15,6 @@ setup_logging()
 
 if __name__ == '__main__':
     threads = []
-    # account_data = config.ACCOUNTS[0]
     try:
         for account_data in config.ACCOUNTS:
             account = Account(

@@ -28,4 +28,33 @@ COOLDOWN_AFTER_AUTO_UPGRADE=7200
 
 ```
 
+## run in docker
+```bash
+docker pull captain13128/hamster-kombat-bot:0.0.1
+vim .env # add config
 
+docker-compose up -d
+```
+config example [here]((https://github.com/captain13128/hamster-kombat-bot/blob/main/.env.example))
+
+## run
+```bash
+git clone https://github.com/captain13128/hamster-kombat-bot.git
+cd hamster-kombat-bot
+cp .env.example .env
+
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
+
+## How to find my phone's user agent?
+
+Open this website using your phone's default browser. Please avoid using Chrome, Firefox, Opera, or any other similar browsers. For Samsung devices, open the website using `Samsung Internet`, and for other Android phones, use the respective default Android browser.
+
+For iOS devices, use Safari.
+
+Search [What is my user agent](https://www.google.com/search?q=What+is+my+user+agent) on Google or visit [WhatsMyUA.info](https://www.whatsmyua.info/) to find your default device browser user-agent. Make sure to add it to your account.
+
+For example (do not use this): Windows 11 and Firefox user-agent is: `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0`

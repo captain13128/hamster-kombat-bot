@@ -5,17 +5,18 @@ services:
     image: captain13128/hamster-kombat-bot:${MASTER_KOMBAT_VERSION}
     command: python main.py
     restart: unless-stopped
-    environment:
-      - ACCOUNTS_NAMES
-      - ACCOUNTS_BEARER_TOKEN
-      - ACCOUNTS_USERAGENT
-      - TARGET_BALANCE=${TARGET_BALANCE:-=18000000000}
-      - COOLDOWN_AFTER_AUTO_UPGRADE=${COOLDOWN_AFTER_AUTO_UPGRADE:-=7200}
-      - AUTO_TAP=${AUTO_TAP:-=True}
-      - AUTO_UPGRADE=${AUTO_UPGRADE:-=True}
-      - AUTO_DAILY_CIPHER=${AUTO_DAILY_CIPHER:-=True}
-      - AUTO_MINIGAME=${AUTO_MINIGAME:-=True}
-      - AUTO_PROMOS=${AUTO_PROMOS:-=True}
-      - SEPARATOR=${SEPARATOR:-=;;}
-      - ACCOUNTS_COUNT=${ACCOUNTS_COUNT:-1}
-      - HK_API_URL=${HK_API_URL:-https://api.hamsterkombatgame.io}
+    env_file: .env
+#    environment:
+#      - ACCOUNTS_NAMES
+#      - ACCOUNTS_BEARER_TOKEN
+#      - ACCOUNTS_USERAGENT
+#      - TARGET_BALANCE=${TARGET_BALANCE:-=18000000000}
+#      - COOLDOWN_AFTER_AUTO_UPGRADE=${COOLDOWN_AFTER_AUTO_UPGRADE:-=7200}
+#      - AUTO_TAP=${AUTO_TAP:-=True}
+#      - AUTO_UPGRADE=${AUTO_UPGRADE:-=True}
+#      - AUTO_DAILY_CIPHER=${AUTO_DAILY_CIPHER:-=True}
+#      - AUTO_MINIGAME=${AUTO_MINIGAME:-=True}
+#      - AUTO_PROMOS=${AUTO_PROMOS:-=True}
+#      - SEPARATOR=${SEPARATOR:-=;;}
+#      - ACCOUNTS_COUNT=${ACCOUNTS_COUNT:-1}
+#      - HK_API_URL=${HK_API_URL:-https://api.hamsterkombatgame.io}
