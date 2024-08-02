@@ -1,0 +1,34 @@
+*.swp
+*.pyc*
+*.orig*
+*.yaml*
+*.backup*
+.idea/
+.DS_Store/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+output/
+tags
+env.bak/
+venv.bak/
+
+# logs
+logs/*
+log/
+*.log
+
+data/
+static/
+celerybeat-schedule.db
+README.md
+sandbox.py
+sandbox/
+media/*
+media/
+sessions/*
+sessions/
