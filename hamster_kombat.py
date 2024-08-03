@@ -150,14 +150,15 @@ class HamsterKombatAPI:
         response = requests.options(url=url, headers=option_headers)
         if response.status_code != 204:
             logger.error(f"Failed OPTION request for '{path}' Status code is not 204, Response: {response.text}",
-                         extra={'path': path, 'method': method, 'headers': _headers})
+                         extra={"path": path, "method": method, "headers": _headers})
+            raise APIError(url=url, method="option", status=response.status_code, headers=option_headers)
         # endregion
 
         # region request
         response = requests.request(method=method.lower(), url=url, headers=req_headers, data=json.dumps(data))
         if not response.ok:
             logger.error(f"Failed '{method}' request for '{path}' Status code is not ok, Response: {response.text}",
-                         extra={'path': path, 'method': method, 'headers': _headers, 'data': data})
+                         extra={"path": path, "method": method, "headers": _headers, "data": data})
             raise APIError(url=url, method=method, status=response.status_code, headers=req_headers, data=data)
         # endregion
 
