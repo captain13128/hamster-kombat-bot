@@ -6,7 +6,7 @@ import time
 
 from hamster_kombat import HamsterKombatAPI, HamsterKombatUtils
 
-from utils import BikeRidePromo, handle_error
+from utils import BikeRidePromo, handle_error, BColors
 import config
 
 
@@ -132,7 +132,7 @@ class Account:
         ))
 
         if len(boost_list) < 1:
-            self.logger.info(f"\033[1;34m no free boosts available\033[0m")
+            self.logger.info(BColors.okblue(f"no free boosts available"))
             return False
 
         boost = boost_list[0]
@@ -140,7 +140,7 @@ class Account:
             self.logger.info(f"free boost found, attempting to buy")
             time.sleep(random.randint(5, 15))
             self.api.buy_boost(boost["id"])
-            self.logger.info(f"free boost bought successfully")
+            self.logger.info(BColors.okblue(f"free boost bought successfully"))
             return True
 
     @handle_error
@@ -149,10 +149,12 @@ class Account:
 
         cooldown_seconds = list(filter(lambda x: x["id"] == card["id"], buy_card["upgradesForBuy"]))[0]["cooldownSeconds"]
         self.cooldown_after_auto_upgrade = min(self.cooldown_after_auto_upgrade, cooldown_seconds)
-        self.logger.info(f"Set timeout {self.cooldown_after_auto_upgrade}s  to next update cooldown_after_auto_upgrade")
+        self.logger.info(BColors.okcyan(
+            f"Set timeout {self.cooldown_after_auto_upgrade}s  to next update cooldown_after_auto_upgrade"
+        ))
 
         if buy_card:
-            self.logger.info(f"card bought successfully")
+            self.logger.info(BColors.okblue(f"card bought successfully"))
             self.sync_account_data()
             time.sleep(random.randint(3, 7))
             # self.balance_coins -= card["price"]
@@ -186,7 +188,7 @@ class Account:
         elif self.parallel_update:
             upgrades = list(filter(lambda x: x.get("cooldownSeconds", 0) == 0, upgrades))
         elif not self.parallel_update and upgrades[0].get("cooldownSeconds", 0) != 0:
-            self.logger.warning(f"card is on cooldown")
+            self.logger.warning(BColors.warning(f"card is on cooldown"))
             return False
 
         for upgrade in upgrades:
@@ -197,15 +199,15 @@ class Account:
                     f"{upgrade['profitPerHourDelta']} and price {upgrade['price']}, Level: {upgrade['level']}"
                 )
                 if self.balance_coins < upgrade["price"]:
-                    self.logger.warning(f"balance is too low to buy the best card.")
+                    self.logger.warning(BColors.warning(f"balance is too low to buy the best card."))
                     return False
                 self.logger.info(f"attempting to buy the best card...")
                 if self.buy_card(upgrade):
                     time.sleep(random.randint(10, 20))
-                    self.logger.info(f"best card purchase completed successfully,"
+                    self.logger.info(BColors.okcyan(f"best card purchase completed successfully,"
                                      f" Your profit per hour "
                                      f"increased by {self.utils.number_to_string(self.profit_per_hour)}"
-                                     f" coins, Spend tokens: {self.utils.number_to_string(self.spend_tokens)}")
+                                     f" coins, Spend tokens: {self.utils.number_to_string(self.spend_tokens)}"))
         return True
 
     @handle_error
@@ -218,7 +220,7 @@ class Account:
             self.logger.error(f"unable to get daily keys mini game.")
             return False
         elif game_data["dailyKeysMiniGame"]["isClaimed"] is True:
-            self.logger.info(f"daily keys mini game already claimed.")
+            self.logger.info(BColors.okblue(f"daily keys mini game already claimed."))
             return True
 
         wait_time = int(
@@ -236,7 +238,7 @@ class Account:
         cipher = ("0" + str(wait_time) + str(random.randint(10000000000, 99999999999)))[:10] + "|" + str(tg_id)
         cipher_base64 = base64.b64encode(cipher.encode()).decode()
         self.api.claim_daily_keys_minigame(cipher=cipher_base64)
-        self.logger.info(f"mini game claimed successfully.")
+        self.logger.info(BColors.okblue(f"mini game claimed successfully."))
 
     @handle_error
     def start_playground_game(self):
@@ -259,7 +261,7 @@ class Account:
                 time.sleep(random.randint(5, 15))
                 self.logger.info(f"claiming Bike Ride 3D in Hamster FAM...")
                 self.api.apply_promo(promo_code=promo_code)
-                self.logger.info(f"playground game claimed successfully.")
+                self.logger.info(BColors.okblue(f"playground game claimed successfully."))
 
     def check_play_ground_game_state(self, promo, promos):
         if not self.config["auto_playground_games"]:
@@ -285,14 +287,15 @@ class Account:
         if cipher is None:
             return False
         elif self.config.get("dailyCipher", {}).get("isClaimed", True):
-            self.logger.info(f"daily cipher already claimed")
+            self.logger.info(BColors.okblue(f"daily cipher already claimed"))
             return True
         cipher = self.utils.daily_cipher_decode(cipher)
         self.logger.info(f"daily cipher: {cipher}")
         morse_code = self.utils.text_to_morse_code(cipher)
-        self.logger.info(f"\033[1;34mdaily cipher: {cipher} and Morse code: {morse_code}\033[0m")
+        self.logger.info(f"daily cipher: {cipher} and Morse code: {morse_code}")
 
         self.api.claim_daily_cipher(morse_code)
+        self.logger.info(BColors.okblue(f"successfully claimed daily cipher"))
         return True
 
     @handle_error
@@ -301,21 +304,23 @@ class Account:
         time.sleep(random.randint(5, 15))
         remains = self.available_taps - int(self.available_taps / self.earn_per_tap) * self.earn_per_tap
         tap = self.api.tap(int(self.available_taps / self.earn_per_tap), remains)
-        self.logger.info(f"Tapping completed successfully.")
+        self.logger.info(BColors.okblue(f"Tapping completed successfully."))
         return True
 
     @handle_error
     def completing_task(self, task):
         self.logger.info(f"run {task['id']}")
         if task["isCompleted"] is True:
-            self.logger.info(f"\033[1;34m{task['id']} task already completed.\033[0m")
+            self.logger.info(BColors.okblue(f"{task['id']} task already completed."))
             return True
         else:
             self.logger.info(f"Attempting to complete {task['id']} task")
             reward_coins = task["rewardCoins"]
             time.sleep(random.randint(2, 10))
             self.api.check_task(task_id=task['id'])
-            self.logger.info(f"task completed successfully, Reward coins: {self.utils.number_to_string(reward_coins)}")
+            self.logger.info(BColors.okblue(
+                f"task completed successfully, Reward coins: {self.utils.number_to_string(reward_coins)}"
+            ))
             return True
 
     @handle_error
@@ -338,8 +343,9 @@ class Account:
         while True:
             day = datetime.datetime.now().day
             my_ip = self.api.ip()
-            self.logger.info(
-                f"account ip: {my_ip['ip']}; company: {my_ip['asn_org']}; country: {my_ip['country_code']}")
+            self.logger.info(BColors.header(
+                f"account ip: {my_ip['ip']}; company: {my_ip['asn_org']}; country: {my_ip['country_code']}"
+            ))
 
             if self.auto_daily_cipher is True:
                 self.daily_cipher()

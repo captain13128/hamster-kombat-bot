@@ -7,6 +7,7 @@ import uuid
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 
+import colorlog
 import requests
 
 from hamster_kombat import APIError
@@ -16,10 +17,44 @@ log_dir = pathlib.Path(__file__).parent / 'log'
 log_maxBytes = 30 * 1024 * 1024
 log_backupCount = 3
 
-
 if not log_dir.exists():
     log_dir.mkdir()
 
+
+class BColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+    @classmethod
+    def header(cls, txt):
+        return cls.HEADER + txt + cls.ENDC
+
+    @classmethod
+    def okblue(cls, txt):
+        return cls.OKBLUE + txt + cls.ENDC
+
+    @classmethod
+    def okcyan(cls, txt):
+        return cls.OKCYAN + txt + cls.ENDC
+
+    @classmethod
+    def okgreen(cls, txt):
+        return cls.OKGREEN + txt + cls.ENDC
+
+    @classmethod
+    def warning(cls, txt):
+        return cls.WARNING + txt + cls.ENDC
+
+    @classmethod
+    def fail(cls, txt):
+        return cls.FAIL + txt + cls.ENDC
 
 
 class BikeRidePromo:
@@ -148,8 +183,21 @@ def setup_logging(
         tg_bot_key: str = None,
         tg_chat_id: str = None,
         is_only_notificator: bool = False):
+    stream_handler = colorlog.StreamHandler()
+    stream_handler_format = colorlog.ColoredFormatter(
+        fmt="%(log_color)s%%(asctime)-15s %(threadName)s %(levelname)s %(name)s %(message)s",
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red,bg_white',
+        },
+    )
+
+    stream_handler.setFormatter(stream_handler_format)
     handlers = [
-        logging.StreamHandler(),
+        stream_handler,
         # RotatingFileHandler(log_dir / 'hamster_kombat_bot.log', maxBytes=log_maxBytes, backupCount=log_backupCount),
     ]
 
@@ -172,7 +220,7 @@ def setup_logging(
     # except Exception as e:
     #     pass
 
-    logging.basicConfig(format='%(asctime)-15s %(threadName)s %(levelname)s %(name)s %(message)s',
+    logging.basicConfig(format="%(asctime)-15s %(threadName)s %(levelname)s %(name)s %(message)s",
                         level=(logging.DEBUG if is_debug else logging.INFO), handlers=handlers)
 
 
