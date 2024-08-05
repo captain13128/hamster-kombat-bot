@@ -4,7 +4,7 @@ import logging
 import random
 import time
 
-from hamster_kombat import HamsterKombatAPI, APIError, HamsterKombatUtils
+from hamster_kombat import HamsterKombatAPI, HamsterKombatUtils
 
 from utils import BikeRidePromo, handle_error
 import config
@@ -39,16 +39,19 @@ class Account:
     auto_minigame: bool
     auto_upgrade: bool
     auto_promos: bool
+    auto_task: bool
 
     api: HamsterKombatAPI
 
     BIKE_RIDE_PROMO = "43e35910-c168-4634-ad4f-52fd764a843f"
     SUPPORTED_PROMO = [BIKE_RIDE_PROMO, ]
 
+    utils = HamsterKombatUtils
+
     @property
     def min_profit_coefficient(self):
-        return HamsterKombatUtils.profit_coefficient(price=self.target_balance - self.balance_coins,
-                                                     profit=self.earn_passive_per_hour)
+        return self.utils.profit_coefficient(price=self.target_balance - self.balance_coins,
+                                             profit=self.earn_passive_per_hour)
 
     def log_account_info(self):
         self.logger.info(f"""
@@ -82,6 +85,7 @@ class Account:
         self.auto_minigame = config.AUTO_MINIGAME
         self.auto_daily_cipher = config.AUTO_DAILY_CIPHER
         self.parallel_update = config.PARALLEL_UPDATE
+        self.auto_task = config.AUTO_TASK
 
         self.cooldown_after_auto_upgrade = config.COOLDOWN_AFTER_AUTO_UPGRADE
         self.target_balance = config.TARGET_BALANCE
@@ -134,7 +138,7 @@ class Account:
         boost = boost_list[0]
         if boost.get("cooldownSeconds", 999999) == 0:
             self.logger.info(f"free boost found, attempting to buy")
-            time.sleep(5)
+            time.sleep(random.randint(5, 15))
             self.api.buy_boost(boost["id"])
             self.logger.info(f"free boost bought successfully")
             return True
@@ -150,7 +154,7 @@ class Account:
         if buy_card:
             self.logger.info(f"card bought successfully")
             self.sync_account_data()
-            time.sleep(3)
+            time.sleep(random.randint(3, 7))
             # self.balance_coins -= card["price"]
             # self.profit_per_hour += card["profitPerHourDelta"]
             self.spend_tokens += card["price"]
@@ -162,17 +166,17 @@ class Account:
     @handle_error
     def buy_best_card(self):
         self.logger.info(f"checking for best card")
-        time.sleep(2)
+        time.sleep(random.randint(2, 10))
 
         upgrades = list(filter(
             lambda x: not x["isExpired"] and x["isAvailable"] and x["profitPerHourDelta"] > 0
                       and x["price"] <= self.max_card_price
-                      and HamsterKombatUtils.profit_coefficient(x["price"],
-                                                                x["profitPerHourDelta"]) >= self.min_profit_coefficient,
+                      and self.utils.profit_coefficient(x["price"],
+                                                        x["profitPerHourDelta"]) >= self.min_profit_coefficient,
             self.api.upgrades_for_buy().get("upgradesForBuy", [])
         ))
         upgrades.sort(
-                key=lambda x: HamsterKombatUtils.profit_coefficient(x["price"], x["profitPerHourDelta"]), reverse=True
+                key=lambda x: self.utils.profit_coefficient(x["price"], x["profitPerHourDelta"]), reverse=True
             )
 
         self.logger.info(f"searching for the best upgrades")
@@ -186,8 +190,8 @@ class Account:
             return False
 
         for upgrade in upgrades:
-            if HamsterKombatUtils.profit_coefficient(upgrade["price"],
-                                                     upgrade["profitPerHourDelta"]) >= self.min_profit_coefficient:
+            if self.utils.profit_coefficient(upgrade["price"],
+                                             upgrade["profitPerHourDelta"]) >= self.min_profit_coefficient:
                 self.logger.info(
                     f"best upgrade is {upgrade['name']} with profit "
                     f"{upgrade['profitPerHourDelta']} and price {upgrade['price']}, Level: {upgrade['level']}"
@@ -197,11 +201,11 @@ class Account:
                     return False
                 self.logger.info(f"attempting to buy the best card...")
                 if self.buy_card(upgrade):
-                    time.sleep(10)
+                    time.sleep(random.randint(10, 20))
                     self.logger.info(f"best card purchase completed successfully,"
                                      f" Your profit per hour "
-                                     f"increased by {HamsterKombatUtils.number_to_string(self.profit_per_hour)}"
-                                     f" coins, Spend tokens: {HamsterKombatUtils.number_to_string(self.spend_tokens)}")
+                                     f"increased by {self.utils.number_to_string(self.profit_per_hour)}"
+                                     f" coins, Spend tokens: {self.utils.number_to_string(self.spend_tokens)}")
         return True
 
     @handle_error
@@ -243,7 +247,7 @@ class Account:
         for promo in promos.get("promos", []):
             if promo.get("promoId", "") == self.BIKE_RIDE_PROMO:
                 bike_ride_promo = BikeRidePromo(user_agent=self.user_agent)
-                time.sleep(5)
+                time.sleep(random.randint(5, 15))
                 promo_code = bike_ride_promo.get_key(self.BIKE_RIDE_PROMO)
                 if promo_code is None:
                     self.logger.error(
@@ -252,7 +256,7 @@ class Account:
                     return False
 
                 self.logger.info(f"bike Ride 3D in Hamster FAM key: {promo_code}")
-                time.sleep(5)
+                time.sleep(random.randint(5, 15))
                 self.logger.info(f"claiming Bike Ride 3D in Hamster FAM...")
                 self.api.apply_promo(promo_code=promo_code)
                 self.logger.info(f"playground game claimed successfully.")
@@ -278,11 +282,14 @@ class Account:
     def daily_cipher(self):
         self.logger.info(f"decoding daily cipher")
         cipher = self.config.get("dailyCipher", {}).get("cipher", None)
-        if cipher is None or self.config.get("dailyCipher", {}).get("isClaimed", True):
+        if cipher is None:
             return False
-        cipher = HamsterKombatUtils.daily_cipher_decode(cipher)
+        elif self.config.get("dailyCipher", {}).get("isClaimed", True):
+            self.logger.info(f"daily cipher already claimed")
+            return True
+        cipher = self.utils.daily_cipher_decode(cipher)
         self.logger.info(f"daily cipher: {cipher}")
-        morse_code = HamsterKombatUtils.text_to_morse_code(cipher)
+        morse_code = self.utils.text_to_morse_code(cipher)
         self.logger.info(f"\033[1;34mdaily cipher: {cipher} and Morse code: {morse_code}\033[0m")
 
         self.api.claim_daily_cipher(morse_code)
@@ -291,28 +298,61 @@ class Account:
     @handle_error
     def start_tap(self):
         self.logger.info(f"Starting to tap")
-        time.sleep(5)
+        time.sleep(random.randint(5, 15))
         remains = self.available_taps - int(self.available_taps / self.earn_per_tap) * self.earn_per_tap
         tap = self.api.tap(int(self.available_taps / self.earn_per_tap), remains)
-        # tap = self.api.tap(490, 10)
         self.logger.info(f"Tapping completed successfully.")
         return True
+
+    @handle_error
+    def completing_task(self, task):
+        self.logger.info(f"run {task['id']}")
+        if task["isCompleted"] is True:
+            self.logger.info(f"\033[1;34m{task['id']} task already completed.\033[0m")
+            return True
+        else:
+            self.logger.info(f"Attempting to complete {task['id']} task")
+            reward_coins = task["rewardCoins"]
+            time.sleep(random.randint(2, 10))
+            self.api.check_task(task_id=task['id'])
+            self.logger.info(f"task completed successfully, Reward coins: {self.utils.number_to_string(reward_coins)}")
+            return True
+
+    @handle_error
+    def start_complete_tasks(self):
+        self.logger.info(f"start complete all available tasks")
+
+        tasks = self.api.list_tasks()
+        if not isinstance(tasks.get("tasks"), list):
+            self.logger.error(f"failed get task list")
+            return False
+
+        return all(list(map(
+            self.completing_task,
+            filter(lambda x: "https://" in x.get("link", "") or x["id"] == "streak_days", tasks["tasks"])
+        )))
 
     def start(self):
         time.sleep(random.randint(10, 60))
         self.logger.info("Start account")
         while True:
             day = datetime.datetime.now().day
+            my_ip = self.api.ip()
+            self.logger.info(
+                f"account ip: {my_ip['ip']}; company: {my_ip['asn_org']}; country: {my_ip['country_code']}")
 
             if self.auto_daily_cipher is True:
                 self.daily_cipher()
-                time.sleep(10)
+                time.sleep(random.randint(10, 30))
             if self.auto_minigame is True:
                 self.start_mini_game(tg_id=self.tg_data.get("telegramUser", {}).get("authUserId"))
-                time.sleep(10)
+                time.sleep(random.randint(10, 30))
             if self.auto_promos is True:
                 self.start_playground_game()
-                time.sleep(10)
+                time.sleep(random.randint(10, 30))
+            if self.auto_task is True:
+                self.start_complete_tasks()
+                time.sleep(random.randint(10, 30))
 
             while True:
                 self.cooldown_after_auto_upgrade = config.COOLDOWN_AFTER_AUTO_UPGRADE
@@ -320,7 +360,7 @@ class Account:
                     if self.auto_upgrade is True:
                         if self.auto_tap is True:
                             self.start_tap()
-                            time.sleep(10)
+                            time.sleep(random.randint(10, 30))
 
                         self.buy_best_card()
 
@@ -328,4 +368,5 @@ class Account:
                         time.sleep(self.cooldown_after_auto_upgrade)
 
                 if day != datetime.datetime.now().day:
+                    self.config = self.api.config()
                     break

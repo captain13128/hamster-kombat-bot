@@ -28,6 +28,7 @@ AUTO_DAILY_CIPHER = bool(strtobool(os.environ.get("AUTO_DAILY_CIPHER", "True")))
 AUTO_MINIGAME = bool(strtobool(os.environ.get("AUTO_MINIGAME", "True")))
 AUTO_UPGRADE = bool(strtobool(os.environ.get("AUTO_UPGRADE", "True")))
 AUTO_PROMOS = bool(strtobool(os.environ.get("AUTO_PROMOS", "True")))
+AUTO_TASK = bool(strtobool(os.environ.get("AUTO_TASK", "True")))
 
 
 PARALLEL_UPDATE = bool(strtobool(os.environ.get("PARALLEL_UPDATE", "True")))
