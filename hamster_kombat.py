@@ -148,7 +148,7 @@ class HamsterKombatAPI:
 
         # region send option request
         response = requests.options(url=url, headers=option_headers)
-        if response.status_code != 204:
+        if not response.ok:
             logger.error(f"Failed OPTION request for '{path}' Status code is not 204, Response: {response.text}",
                          extra={"path": path, "method": method, "headers": _headers})
             raise APIError(url=url, method="option", status=response.status_code, headers=option_headers)
