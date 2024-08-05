@@ -185,7 +185,7 @@ def setup_logging(
         is_only_notificator: bool = False):
     stream_handler = colorlog.StreamHandler()
     stream_handler_format = colorlog.ColoredFormatter(
-        fmt="%(log_color)s%%(asctime)-15s %(threadName)s %(levelname)s %(name)s %(message)s",
+        fmt="%(log_color)s%(asctime)-15s %(threadName)s %(levelname)s %(name)s %(message)s",
         log_colors={
             'DEBUG': 'cyan',
             'INFO': 'green',

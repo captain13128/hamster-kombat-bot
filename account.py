@@ -335,7 +335,7 @@ class Account:
         )))
 
     def start(self):
-        time.sleep(random.randint(10, 60))
+        time.sleep(random.randint(60, 240))
         self.logger.info("Start account")
         while True:
             day = datetime.datetime.now().day
