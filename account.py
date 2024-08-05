@@ -149,9 +149,6 @@ class Account:
 
         cooldown_seconds = list(filter(lambda x: x["id"] == card["id"], buy_card["upgradesForBuy"]))[0]["cooldownSeconds"]
         self.cooldown_after_auto_upgrade = min(self.cooldown_after_auto_upgrade, cooldown_seconds)
-        self.logger.info(BColors.okcyan(
-            f"Set timeout {self.cooldown_after_auto_upgrade}s  to next update cooldown_after_auto_upgrade"
-        ))
 
         if buy_card:
             self.logger.info(BColors.okblue(f"card bought successfully"))
@@ -371,6 +368,9 @@ class Account:
                         self.buy_best_card()
 
                         self.log_account_info()
+                        self.logger.info(BColors.header(
+                            f"next auto update will be in {self.cooldown_after_auto_upgrade} seconds"
+                        ))
                         time.sleep(self.cooldown_after_auto_upgrade)
 
                 if day != datetime.datetime.now().day:
