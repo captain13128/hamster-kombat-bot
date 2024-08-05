@@ -8,6 +8,8 @@ You need to specify these env variables to run this bot. If you run it locally, 
 file.
 
 ``` bash
+MASTER_KOMBAT_VERSION=0.0.2
+
 SEPARATOR=;;
 ACCOUNTS_COUNT=3
 
@@ -22,6 +24,7 @@ AUTO_UPGRADE=True
 AUTO_DAILY_CIPHER=False
 AUTO_MINIGAME=False
 AUTO_PROMOS=False
+AUTO_TASK=True
 
 TARGET_BALANCE=18000000000
 COOLDOWN_AFTER_AUTO_UPGRADE=7200
