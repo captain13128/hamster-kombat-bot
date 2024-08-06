@@ -288,10 +288,10 @@ class Account:
             return True
         cipher = self.utils.daily_cipher_decode(cipher)
         self.logger.info(f"daily cipher: {cipher}")
-        morse_code = self.utils.text_to_morse_code(cipher)
-        self.logger.info(f"daily cipher: {cipher} and Morse code: {morse_code}")
+        # morse_code = self.utils.text_to_morse_code(cipher)
+        # self.logger.info(f"daily cipher: {cipher} and Morse code: {morse_code}")
 
-        self.api.claim_daily_cipher(morse_code)
+        self.api.claim_daily_cipher(cipher=cipher)
         self.logger.info(BColors.okblue(f"successfully claimed daily cipher"))
         return True
 
@@ -373,6 +373,6 @@ class Account:
                         ))
                         time.sleep(self.cooldown_after_auto_upgrade)
 
-                if day != datetime.datetime.now().day:
+                if day != datetime.datetime.now().day and datetime.datetime.now().hour > random.randint(2, 13):
                     self.config = self.api.config()
                     break
