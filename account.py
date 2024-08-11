@@ -288,8 +288,6 @@ class Account:
             return True
         cipher = self.utils.daily_cipher_decode(cipher)
         self.logger.info(f"daily cipher: {cipher}")
-        # morse_code = self.utils.text_to_morse_code(cipher)
-        # self.logger.info(f"daily cipher: {cipher} and Morse code: {morse_code}")
 
         self.api.claim_daily_cipher(cipher=cipher)
         self.logger.info(BColors.okblue(f"successfully claimed daily cipher"))
@@ -331,7 +329,7 @@ class Account:
 
         return all(list(map(
             self.completing_task,
-            filter(lambda x: "https://" in x.get("link", "") or x["id"] == "streak_days", tasks["tasks"])
+            filter(lambda x: x.get("type", "") in ("WithLink", "WithLocaleLink", ) or x["id"] == "streak_days", tasks["tasks"])
         )))
 
     def start(self):
