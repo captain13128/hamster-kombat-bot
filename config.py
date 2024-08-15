@@ -11,6 +11,8 @@ load_dotenv(BASE_DIR / ".env", override=False)
 SEPARATOR = os.environ.get("SEPARATOR", ";;")
 ACCOUNTS_COUNT = int(os.environ.get("ACCOUNTS_COUNT", 1))
 
+HK_API_URL = os.environ.get("HK_API_URL", "https://api.hamsterkombatgame.io")
+
 ACCOUNT_NAMES = os.environ["ACCOUNTS_NAMES"].split(SEPARATOR, ACCOUNTS_COUNT)
 ACCOUNTS_BEARER_TOKEN = os.environ["ACCOUNTS_BEARER_TOKEN"].split(SEPARATOR, ACCOUNTS_COUNT)
 ACCOUNTS_USERAGENT = os.environ["ACCOUNTS_USERAGENT"].split(SEPARATOR, ACCOUNTS_COUNT)

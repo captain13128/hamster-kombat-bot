@@ -57,13 +57,16 @@ class BColors:
         return cls.FAIL + txt + cls.ENDC
 
 
-class BikeRidePromo:
-    app_token: str = "d28721be-fd2d-4b45-869e-9f253b554e50"
-    client_id: str
+class GamePromo:
     user_agent: str
+    URL: str = "https://api.gamepromo.io/"
 
-    def __init__(self, user_agent: str):
-        self.client_id = f"{int(time.time() * 1000)}-{''.join(str(random.randint(0, 9)) for _ in range(19))}"
+    @property
+    def client_id(self) -> str:
+        return f"{int(time.time() * 1000)}-{''.join(str(random.randint(0, 9)) for _ in range(19))}"
+
+    def __init__(self, user_agent: str, app_token: str, name: str = None):
+        self.logger = logging.getLogger(f"GamePromo_logger[{name}]")
         self.user_agent = user_agent
 
         self.default_headers = {
@@ -73,7 +76,7 @@ class BikeRidePromo:
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-site",
             "User-Agent": self.user_agent,
-            "Content-Type": "application/json; charset=utf-8",
+            # "Content-Type": "application/json; charset=utf-8",
             "Host": "api.gamepromo.io",
             "Origin": "",
             "Referer": "",
@@ -87,92 +90,125 @@ class BikeRidePromo:
                 '"Android WebView";v="125", "Chromium";v="125", "Not.A/Brand";v="24"'
             )
 
-        client_token = self.login()
-        self.auth = f"Bearer {client_token}"
+        self.client_token = self.login(app_token=app_token)
+        self.app_token = app_token
 
-    def login(self):
-        logger.info(f"login to BikeRide")
-        url = "https://api.gamepromo.io/promo/login-client"
-        headers = self.default_headers
+    def _request(self, method: str, path: str, headers: dict = None, data: dict = None, auth: str = None):
+        # region url path
+        if path[0] == "/":
+            path = path[1::]
+        url = self.URL + path
+        # endregion
+
+        # region headers
+        _headers = self.default_headers
+        if headers is not None:
+            _headers.update(headers)
+        option_headers = _headers
+        req_headers = _headers
+
+        option_headers.update({
+            "Access-Control-Request-Method": method.upper(),
+        })
+
+        if data is not None:
+            if auth is None:
+                option_headers["Access-Control-Request-Headers"] = "content-type"
+                req_headers.update({"Content-Type": "application/json; charset=utf-8"})
+            else:
+                option_headers["Access-Control-Request-Headers"] = "authorization,content-type"
+
+                req_headers.update({
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Authorization": f"Bearer {auth}",
+                })
+
+            # , "Accept": "application/json"
+        # endregion
+
+        # region send option request
+        response = requests.options(url=url, headers=option_headers)
+        if not response.ok:
+            self.logger.error(f"Failed OPTION request for '{path}'"
+                              f" Status code is not 204, Response: {response.text}",
+                              extra={"path": path, "method": method, "headers": _headers})
+            raise APIError(url=url, method="option", status=response.status_code, headers=option_headers)
+        # endregion
+
+        # region request
+        response = requests.request(method=method.lower(), url=url, headers=req_headers, data=json.dumps(data))
+        if not response.ok:
+            self.logger.error(f"Failed '{method}' request for '{path}'"
+                              f" Status code is not ok, Response: {response.text}",
+                              extra={"path": path, "method": method, "headers": _headers, "data": data})
+            raise APIError(url=url, method=method, status=response.status_code, headers=req_headers, data=data)
+        # endregion
+
+        return response.json()
+
+    def login(self, app_token: str):
+        self.logger.info(f"login to BikeRide")
+        path = "promo/login-client"
 
         data = {
-            "appToken": self.app_token,
+            "appToken": app_token,
             "clientId": self.client_id,
             "clientOrigin": "deviceid",
         }
 
-        response = requests.post(url=url, headers=headers, data=data)
-        if not response.ok:
-            return None
-        result = response.json()
+        result = self._request(method="POST", path=path, headers=None, data=data, auth=None)
 
-        if "clientToken" not in response:
-            logger.error(f"unable to get Bike Ride 3D in Hamster FAM key.")
+        if "clientToken" not in result:
+            self.logger.error(f"unable to get key.")
             return None
 
         return result["clientToken"]
 
-    def register_event(self, promo_id: str):
-        headers = self.default_headers
+    def register_event(self, promo_id: str, max_retry: int = 10, delay: int = 120):
+        path = "promo/register-event"
+        retry_count = 0
+        result = None
 
-        headers.update({
-            "Authorization": self.auth,
-        })
-
-        url = "https://api.gamepromo.io/promo/register-event"
-        while True:
+        while retry_count <= max_retry:
+            retry_count += 1
             event_id = str(uuid.uuid4())
 
-            data = json.dumps(
-                {
-                    "promoId": promo_id,
-                    "eventId": event_id,
-                    "eventOrigin": "undefined",
-                }
-            )
+            data = {
+                "promoId": promo_id,
+                "eventId": event_id,
+                "eventOrigin": "undefined",
+            }
 
-            response = requests.post(url=url, headers=headers, data=data)
-            if not response.ok:
-                return None
             try:
-                result = response.json()
+                result = self._request(method="POST", path=path, headers=None, data=data, auth=self.client_token)
             except Exception as e:
-                logger.error(f"Failed register event", exc_info=True)
+                self.logger.error(f"Failed register event", exc_info=True)
                 result = None
 
-            if result is None or not isinstance(result, dict):
-                time.sleep(5)
+            if result is None or not isinstance(result, dict) or not result.get("hasCode", False):
+                time.sleep(delay + random.randint(5, 15))
                 continue
-
-            if not result.get("hasCode", False):
-                time.sleep(5)
-                continue
-
             break
 
+        if result is None or not isinstance(result, dict) or not result.get("hasCode", False):
+            self.logger.error(f"Unable to register event.")
+            return False
+
+        self.logger.info(f"Event registered successfully.")
+        return True
+
     def get_key(self, promo_id: str):
-        logger.info(f"getting Bike Ride 3D in Hamster FAM key...")
+        self.logger.info(f"getting key...")
 
-        url = "https://api.gamepromo.io/promo/create-code"
-
-        headers = self.default_headers
-
-        headers.update({
-            "Authorization": self.auth,
-        })
+        path = "promo/create-code"
 
         data = {
             "promoId": promo_id,
         }
 
-        response = requests.post(url=url, headers=headers, data=data)
-        if not response.ok:
-            return None
-        result = response.json()
+        result = self._request(method="POST", path=path, headers=None, data=data, auth=self.client_token)
         if result.get("promoCode", "") == "":
-            logger.error(
-                f"unable to get Bike Ride 3D in Hamster FAM key."
-            )
+            self.logger.error(f"unable to get key.")
             return None
 
         return result["promoCode"]

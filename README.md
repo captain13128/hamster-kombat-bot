@@ -8,7 +8,7 @@ You need to specify these env variables to run this bot. If you run it locally, 
 file.
 
 ``` bash
-MASTER_KOMBAT_VERSION=0.0.7
+MASTER_KOMBAT_VERSION=0.0.8
 
 SEPARATOR=;;
 ACCOUNTS_COUNT=3

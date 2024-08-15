@@ -3,10 +3,11 @@ import datetime
 import logging
 import random
 import time
+import json
 
 from hamster_kombat import HamsterKombatAPI, HamsterKombatUtils
 
-from utils import BikeRidePromo, handle_error, BColors
+from utils import GamePromo, handle_error, BColors
 import config
 
 
@@ -43,8 +44,8 @@ class Account:
 
     api: HamsterKombatAPI
 
-    BIKE_RIDE_PROMO = "43e35910-c168-4634-ad4f-52fd764a843f"
-    SUPPORTED_PROMO = [BIKE_RIDE_PROMO, ]
+    # BIKE_RIDE_PROMO = "43e35910-c168-4634-ad4f-52fd764a843f"
+    SUPPORTED_PROMO: dict
 
     utils = HamsterKombatUtils
 
@@ -72,8 +73,7 @@ class Account:
         self.bearer_token = f"Bearer {bearer_token}"
         self.user_agent = user_agent
 
-        self.api = HamsterKombatAPI(api_url="https://api.hamsterkombatgame.io",
-                                    auth=self.bearer_token, user_agent=user_agent)
+        self.api = HamsterKombatAPI(api_url=config.HK_API_URL, auth=self.bearer_token, user_agent=user_agent)
         self.sync_account_data()
 
         self.config = self.api.config()
@@ -89,6 +89,9 @@ class Account:
 
         self.cooldown_after_auto_upgrade = config.COOLDOWN_AFTER_AUTO_UPGRADE
         self.target_balance = config.TARGET_BALANCE
+
+        with open("promo_games.json", "r") as file:
+            self.SUPPORTED_PROMO = json.load(file)
 
         self.log_account_info()
 
@@ -220,10 +223,7 @@ class Account:
             self.logger.info(BColors.okblue(f"daily keys mini game already claimed."))
             return True
 
-        wait_time = int(
-            game_data["dailyKeysMiniGame"]["remainSecondsToGuess"]
-            - random.randint(8, 15)
-        )
+        wait_time = int(game_data["dailyKeysMiniGame"]["remainSecondsToGuess"] - random.randint(8, 15))
 
         if wait_time < 0:
             self.logger.error(f"unable to claim mini game.")
@@ -244,21 +244,38 @@ class Account:
         promos = self.api.get_promos()
 
         for promo in promos.get("promos", []):
-            if promo.get("promoId", "") == self.BIKE_RIDE_PROMO:
-                bike_ride_promo = BikeRidePromo(user_agent=self.user_agent)
-                time.sleep(random.randint(5, 15))
-                promo_code = bike_ride_promo.get_key(self.BIKE_RIDE_PROMO)
+            self.complete_promo_game(promo=promo)
+
+        self.logger.info(BColors.okblue(f"playground games claimed successfully."))
+
+    @handle_error
+    def complete_promo_game(self, promo):
+        if promo.get("promoId", "") in self.SUPPORTED_PROMO:
+            promo_data = self.SUPPORTED_PROMO[promo.get("promoId", "")]
+            self.logger.info(BColors.okblue(f"start getting key in {promo_data.get('name', 'without_name')} game."))
+
+            game_promo = GamePromo(user_agent=self.user_agent, app_token=promo_data["appToken"],
+                                   name=promo_data.get('name', 'without_name'))
+            time.sleep(random.randint(5, 15))
+            if game_promo.register_event(promo_id=promo.get("promoId"), max_retry=promo_data.get("maxRetry", 10),
+                                         delay=promo_data.get("delay", 120)) is True:
+
+                # time.sleep(random.randint(5, 15))
+                promo_code = game_promo.get_key(promo_id=promo.get("promoId"))
                 if promo_code is None:
                     self.logger.error(
-                        f"unable to get Bike Ride 3D in Hamster FAM key."
+                        f"unable to get {promo_data.get('name', 'without_name')} in Hamster FAM key."
                     )
                     return False
 
-                self.logger.info(f"bike Ride 3D in Hamster FAM key: {promo_code}")
+                self.logger.info(f"key: {promo_code}")
                 time.sleep(random.randint(5, 15))
-                self.logger.info(f"claiming Bike Ride 3D in Hamster FAM...")
+                self.logger.info(f"claiming...")
                 self.api.apply_promo(promo_code=promo_code)
-                self.logger.info(BColors.okblue(f"playground game claimed successfully."))
+                self.logger.info(BColors.okblue(
+                    f"playground {promo_data.get('name', 'without_name')} game claimed successfully."
+                ))
+                return True
 
     def check_play_ground_game_state(self, promo, promos):
         if not self.config["auto_playground_games"]:
